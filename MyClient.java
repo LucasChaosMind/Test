@@ -6,25 +6,53 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 
 public class MyClient {
-    public static void main(String[] args){
+    public static void main(String[] args) {
+        try {
+            Socket socket = new Socket("localhost", 50051);
+            System.out.println("Conexão Estabelecida!");
 
+            BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
 
-        try (Socket echoSocket = new Socket("localhost", 50051);
-             PrintWriter out = new PrintWriter(echoSocket.getOutputStream(), true);
-             BufferedReader in = new BufferedReader(new InputStreamReader(echoSocket.getInputStream()));
-             BufferedReader stdIn = new BufferedReader(new InputStreamReader(System.in))
-        ) {
-            String userInput;
-            while ((userInput = stdIn.readLine()) != null) {
-                out.println(userInput);
-                System.out.println("echo: " + in.readLine());
+            BufferedReader console = new BufferedReader(new InputStreamReader(System.in));
+
+            Thread msgThread = new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        String serverMsg;
+                        while ((serverMsg = in.readLine()) != null) {
+                            System.out.println("Outro Usuario: " + serverMsg);
+                        }
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            });
+
+            msgThread.start();
+
+            while (true) {
+                System.out.print("Msg: ");
+                String myMsg = console.readLine();
+                out.println(myMsg);
+
+                if (myMsg == "" || myMsg == null){
+                    break;
+                } 
             }
-        } catch (UnknownHostException e) {
-            e.printStackTrace();
-            System.exit(1);
+            
+            msgThread.join();
+
+        }finally{
+            in.close();
+            out.close();
+            console.close();
+            socket.close();
         } catch (IOException e) {
             e.printStackTrace();
-            System.exit(1);
+        }catch (InterruptedException e){
+            e.printStackTrace();
         }
     }
 }
